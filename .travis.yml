@@ -1,7 +1,7 @@
 language: node_js
 node_js:
   - "node"
-cache: 
+cache:
   directories:
     - node_modules
 script:
@@ -10,6 +10,6 @@ deploy:
   provider: pages
   github_token: $github_token
   local_dir: build
-  on: 
+  on:
     branch: master
-  sking_cleanup: true
+  skip_cleanup: true
