@@ -11,6 +11,9 @@ export default class Map {
         this.cells[i][j] = new Cell(i, j, canvas);
       }
     }
+
+    this.cells[0][0].state = Cell.START;
+    this.cells[canvas.resolution - 1][canvas.resolution - 1].state = Cell.END;
   }
 
   draw() {

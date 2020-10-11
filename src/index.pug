@@ -7,3 +7,18 @@ html(lang="en")
   body
     #Container
       #Canvas
+      #Controls
+        #CellStateSelector
+          p Change cell to: 
+          div
+            input#RadioWall(type="radio", name="cellState", value="0", checked)
+            label(for="RadioWall") Wall
+          div
+            input#RadioPath(type="radio", name="cellState", value="1")
+            label(for="RadioPath") Path
+          div
+            input#RadioStart(type="radio", name="cellState", value="2")
+            label(for="RadioStart") Start
+          div
+            input#RadioEnd(type="radio", name="cellState", value="3")
+            label(for="RadioEnd") End

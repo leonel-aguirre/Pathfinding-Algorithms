@@ -1,6 +1,8 @@
 export default class Cell {
   static WALL = 0;
   static PATH = 1;
+  static START = 2;
+  static END = 3;
 
   constructor(x, y, canvas) {
     this.x = x;
@@ -31,12 +33,18 @@ export default class Cell {
       case Cell.PATH:
         p5.fill("#DDD");
         break;
+      case Cell.START:
+        p5.fill("#0cf574");
+        break;
+      case Cell.END:
+        p5.fill("#ff206e");
+        break;
     }
 
     p5.rect(this.x * xStep, this.y * yStep, xStep, yStep);
 
     if (mouseOver) {
-      p5.fill("#BAD");
+      p5.fill("#17A398");
       p5.rect(
         this.x * xStep + (xStep * 0.333) / 2,
         this.y * yStep + (yStep * 0.333) / 2,
