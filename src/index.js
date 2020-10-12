@@ -14,11 +14,14 @@ let changeCellTo = Cell.WALL;
 // DOM ELEMENTS +++
 
 let canvasContainer;
+let generateMazeButton;
 
 // DOM ELEMENTS ---
 
 window.onload = () => {
   canvasContainer = document.querySelector("#Canvas");
+
+  generateMazeButton = document.querySelector("#GenerateMazeButton");
 
   const sketch = (p5) => {
     p5.setup = () => {
@@ -61,5 +64,9 @@ function addListeners() {
       "input",
       (e) => (changeCellTo = parseInt(e.target.value))
     );
+  });
+
+  generateMazeButton.addEventListener("click", () => {
+    map.enableMazeGeneration = true;
   });
 }

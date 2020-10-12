@@ -34,7 +34,7 @@ export default class Map {
       let yStep = height / resolution;
 
       p5.push();
-      p5.fill("#ff0054");
+      p5.fill("#FBB13C");
       p5.rect(w.x * xStep, w.y * yStep, xStep, yStep);
       p5.pop();
     });
@@ -143,6 +143,9 @@ export default class Map {
 
       // Maze generation starts.
       this.mazeGeneration.generatingMaze = true;
+      document
+        .querySelector("#GenerateMazeButton")
+        .setAttribute("disabled", "");
     }
 
     // While walls set is not empty.
@@ -179,6 +182,7 @@ export default class Map {
 
       this.cells[0][0].state = Cell.START; // Start cell.
       this.cells[resolution - 1][resolution - 1].state = Cell.END; // End cell.
+      document.querySelector("#GenerateMazeButton").removeAttribute("disabled");
     }
   }
 }
