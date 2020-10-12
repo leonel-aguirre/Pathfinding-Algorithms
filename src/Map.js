@@ -4,11 +4,20 @@ export default class Map {
   constructor(canvas) {
     this.cells = new Array(canvas.resolution);
     this.canvas = canvas;
-    this.enableMazeGeneration = true;
+    this.enableMazeGeneration = false;
+    this.enablePathFinding = false;
+    this.startCell = undefined;
+    this.endCell = undefined;
     this.mazeGeneration = {
       walls: [],
       beginCell: undefined,
       generatingMaze: false,
+    };
+    this.pathFinding = {
+      openSet: [],
+      closedSet: [],
+      findingPath: false,
+      path: [],
     };
 
     // Cells array initialization.
@@ -19,7 +28,10 @@ export default class Map {
       }
     }
 
+    this.startCell = this.cells[0][0];
     this.cells[0][0].state = Cell.START; // Start cell.
+
+    this.endCell = this.cells[canvas.resolution - 1][canvas.resolution - 1];
     this.cells[canvas.resolution - 1][canvas.resolution - 1].state = Cell.END; // End cell.
   }
 
@@ -27,21 +39,41 @@ export default class Map {
     for (let i = 0; i < this.cells.length; i++)
       for (let j = 0; j < this.cells[i].length; j++) this.cells[i][j].draw();
 
+    this.pathFinding.openSet.forEach((c) => {
+      this.highlightCell(c, "#57B8FF");
+    });
+
+    this.pathFinding.closedSet.forEach((c) => {
+      this.highlightCell(c, "#FBB13C");
+    });
+
+    this.pathFinding.path.forEach((c) => {
+      this.highlightCell(c, "#2FBF71");
+    });
+
     // Highlights walls during maze generation.
     this.mazeGeneration.walls.forEach((w) => {
-      let { p5, width, height, resolution } = this.canvas;
-      let xStep = width / resolution;
-      let yStep = height / resolution;
-
-      p5.push();
-      p5.fill("#FBB13C");
-      p5.rect(w.x * xStep, w.y * yStep, xStep, yStep);
-      p5.pop();
+      console.log(w);
+      this.highlightCell(w, "#FBB13C");
     });
   }
 
   update() {
     if (this.enableMazeGeneration) this.generateMaze();
+    if (this.enablePathFinding) this.pathFind();
+  }
+
+  highlightCell(cell, color) {
+    if (cell.state != Cell.START && cell.state != Cell.END) {
+      let { p5, width, height, resolution } = this.canvas;
+      let xStep = width / resolution;
+      let yStep = height / resolution;
+
+      p5.push();
+      p5.fill(color);
+      p5.rect(cell.x * xStep, cell.y * yStep, xStep, yStep);
+      p5.pop();
+    }
   }
 
   changeSelectedCellState(newState) {
@@ -53,38 +85,106 @@ export default class Map {
     let x = Math.floor((p5.mouseX + xOffset) / (width / resolution));
     let y = Math.floor((p5.mouseY + yOffset) / (height / resolution));
 
-    if (x >= 0 && x < resolution && y >= 0 && y < resolution)
+    if (x >= 0 && x < resolution && y >= 0 && y < resolution) {
+      if (newState == Cell.START) {
+        this.startCell.state = Cell.PATH;
+        this.startCell = this.cells[x][y];
+      } else if (newState == Cell.END) {
+        this.endCell.state = Cell.PATH;
+        this.endCell = this.cells[x][y];
+      }
+
       this.cells[x][y].changeState(newState);
+    }
+  }
+
+  pathFind() {
+    const calculateHeuristic = (cell) => {
+      // // Option 1.
+      // let h = Math.sqrt(
+      //   (cell.x - this.endCell.x) ** 2 + (cell.y - this.endCell.y) ** 2
+      // );
+
+      // Option 2. (Better performance or maybe not)
+      let h = (cell.x - this.endCell.x) ** 2 + (cell.y - this.endCell.y) ** 2;
+
+      // // Option 3.
+      // let h =
+      //   Math.abs(cell.x - this.endCell.x) + Math.abs(cell.y - this.endCell.y);
+
+      return h;
+    };
+
+    if (!this.pathFinding.findingPath) {
+      this.pathFinding.closedSet = [];
+      this.pathFinding.openSet = [];
+      this.pathFinding.path = [];
+
+      this.startCell.h = calculateHeuristic(this.startCell);
+
+      this.pathFinding.openSet.push(this.startCell);
+      this.pathFinding.findingPath = true;
+      this.disableDOMButtons();
+    }
+
+    if (this.pathFinding.openSet.length > 0) {
+      let current = this.pathFinding.openSet[0];
+
+      this.pathFinding.openSet.forEach((c) => {
+        if (c.f < current.f) current = c;
+      });
+
+      if (current == this.endCell) {
+        this.enablePathFinding = false;
+        this.pathFinding.findingPath = false;
+        this.enableDOMButtons();
+      }
+
+      this.pathFinding.openSet.splice(
+        this.pathFinding.openSet.indexOf(current),
+        1
+      );
+      this.pathFinding.closedSet.push(current);
+
+      let neighbours = this.findNeighbourCells(current, 1).filter(
+        (n) => n.state != Cell.WALL
+      );
+
+      neighbours.forEach((n) => {
+        if (!this.pathFinding.closedSet.includes(n)) {
+          let tempG = current.g + 1;
+
+          if (this.pathFinding.openSet.includes(n)) {
+            n.g = n.g < tempG ? tempG : n.g;
+          } else {
+            n.g = tempG;
+            this.pathFinding.openSet.push(n);
+          }
+
+          n.parent = current;
+
+          n.h = calculateHeuristic(n);
+          n.f = n.g + n.h;
+        }
+      });
+
+      this.pathFinding.path = [];
+
+      let pathCell = current;
+      while (pathCell.parent != undefined) {
+        this.pathFinding.path.push(pathCell);
+        pathCell = pathCell.parent;
+      }
+    } else {
+      this.enablePathFinding = false;
+      this.pathFinding.findingPath = false;
+      this.enableDOMButtons();
+    }
   }
 
   generateMaze() {
     let { beginCell } = this.mazeGeneration;
     let { resolution } = this.canvas;
-
-    // Returns an array with the surounding neighbours separated by 1 cell.
-    const findNeighbourCells = (cell) => {
-      let neighbourCells = [];
-
-      // Iterates through all surounding directions.
-      for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-          // Only accepts indexes between the bounds of the bidimensional array.
-          if (
-            cell.x + i >= 0 &&
-            cell.x + i < resolution &&
-            cell.y + j >= 0 &&
-            cell.y + j < resolution
-          ) {
-            // Excludes diagonal neighbours.
-            if (Math.abs(i) ^ Math.abs(j)) {
-              neighbourCells.push(this.cells[cell.x + i * 2][cell.y + j * 2]);
-            }
-          }
-        }
-      }
-
-      return neighbourCells;
-    };
 
     // Returns a random wall from the wall set and then it is removed from the set.
     const takeRandomWall = () => {
@@ -101,7 +201,7 @@ export default class Map {
     // Connects the wall with a random selected neighbour path.
     const connectWallToMaze = (wall) => {
       // Gets all neighbours and filters only the ones that are a path.
-      let neighbourPaths = findNeighbourCells(wall).filter(
+      let neighbourPaths = this.findNeighbourCells(wall, 2).filter(
         (c) => c.state == Cell.PATH
       );
 
@@ -125,6 +225,11 @@ export default class Map {
 
     // Initializes the generation.
     if (!this.mazeGeneration.generatingMaze) {
+      // Reset Pathfinding information.
+      this.pathFinding.closedSet = [];
+      this.pathFinding.openSet = [];
+      this.pathFinding.path = [];
+
       // All cells become walls.
       for (let i = 0; i < this.cells.length; i++) {
         for (let j = 0; j < this.cells[i].length; j++) {
@@ -137,15 +242,13 @@ export default class Map {
       beginCell.state = Cell.PATH;
 
       // Begin cell's neighbour walls are added to the wall set.
-      this.mazeGeneration.walls = findNeighbourCells(beginCell).filter(
+      this.mazeGeneration.walls = this.findNeighbourCells(beginCell, 2).filter(
         (c) => c.state == Cell.WALL
       );
 
       // Maze generation starts.
       this.mazeGeneration.generatingMaze = true;
-      document
-        .querySelector("#GenerateMazeButton")
-        .setAttribute("disabled", "");
+      this.disableDOMButtons();
     }
 
     // While walls set is not empty.
@@ -157,7 +260,7 @@ export default class Map {
       connectWallToMaze(randomWall);
 
       // Finds neighbour walls.
-      let neighbourWalls = findNeighbourCells(randomWall).filter(
+      let neighbourWalls = this.findNeighbourCells(randomWall, 2).filter(
         (c) => c.state == Cell.WALL
       );
 
@@ -180,9 +283,53 @@ export default class Map {
       this.mazeGeneration.generatingMaze = false;
       this.enableMazeGeneration = false;
 
+      this.startCell.state = Cell.PATH;
       this.cells[0][0].state = Cell.START; // Start cell.
+      this.startCell = this.cells[0][0];
+      this.endCell.state = Cell.PATH;
       this.cells[resolution - 1][resolution - 1].state = Cell.END; // End cell.
-      document.querySelector("#GenerateMazeButton").removeAttribute("disabled");
+      this.endCell = this.cells[resolution - 1][resolution - 1];
+
+      this.enableDOMButtons();
     }
+  }
+
+  // Returns an array with the surounding neighbours separated by 1 cell.
+  findNeighbourCells(cell, distance) {
+    let { resolution } = this.canvas;
+
+    let neighbourCells = [];
+
+    // Iterates through all surounding directions.
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        // Only accepts indexes between the bounds of the bidimensional array.
+        if (
+          cell.x + i >= 0 &&
+          cell.x + i < resolution &&
+          cell.y + j >= 0 &&
+          cell.y + j < resolution
+        ) {
+          // Excludes diagonal neighbours.
+          if (Math.abs(i) ^ Math.abs(j)) {
+            neighbourCells.push(
+              this.cells[cell.x + i * distance][cell.y + j * distance]
+            );
+          }
+        }
+      }
+    }
+
+    return neighbourCells;
+  }
+
+  disableDOMButtons() {
+    document.querySelector("#GenerateMazeButton").setAttribute("disabled", "");
+    document.querySelector("#FindPathButton").setAttribute("disabled", "");
+  }
+
+  enableDOMButtons() {
+    document.querySelector("#GenerateMazeButton").removeAttribute("disabled");
+    document.querySelector("#FindPathButton").removeAttribute("disabled");
   }
 }

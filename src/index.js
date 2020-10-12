@@ -5,7 +5,7 @@ import Map from "./Map";
 
 let width = 600;
 let height = 600;
-let resolution = 51;
+let resolution = 61;
 
 let map;
 
@@ -15,6 +15,7 @@ let changeCellTo = Cell.WALL;
 
 let canvasContainer;
 let generateMazeButton;
+let findPathButton;
 
 // DOM ELEMENTS ---
 
@@ -22,6 +23,7 @@ window.onload = () => {
   canvasContainer = document.querySelector("#Canvas");
 
   generateMazeButton = document.querySelector("#GenerateMazeButton");
+  findPathButton = document.querySelector("#FindPathButton");
 
   const sketch = (p5) => {
     p5.setup = () => {
@@ -68,5 +70,9 @@ function addListeners() {
 
   generateMazeButton.addEventListener("click", () => {
     map.enableMazeGeneration = true;
+  });
+
+  findPathButton.addEventListener("click", () => {
+    map.enablePathFinding = true;
   });
 }
