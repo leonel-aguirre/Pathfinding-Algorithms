@@ -4,11 +4,11 @@ export default class Cell {
   static START = 2;
   static END = 3;
 
-  constructor(x, y, canvas) {
+  constructor(x, y, state, canvas) {
     this.x = x;
     this.y = y;
+    this.state = state;
     this.canvas = canvas;
-    this.state = Cell.PATH;
   }
 
   draw() {

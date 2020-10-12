@@ -5,7 +5,7 @@ import Map from "./Map";
 
 let width = 600;
 let height = 600;
-let resolution = 30;
+let resolution = 51;
 
 let map;
 
@@ -36,6 +36,7 @@ window.onload = () => {
     p5.draw = () => {
       p5.background(200);
       map.draw();
+      map.update();
     };
 
     p5.mouseDragged = () => {
